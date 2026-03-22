@@ -11,4 +11,50 @@ model User {
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
+
+  boards       Board[]       @relation("OwnerBoards")
+  boardMembers BoardMember[]
+}
+
+model Board {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+
+  owner   User          @relation("OwnerBoards", fields: [ownerId], references: [id])
+  members BoardMember[]
+  columns Column[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BoardMember {
+  id      String    @id @default(uuid())
+  boardId String
+  userId  String
+  role    BoardRole @default(VIEWER)
+
+  board Board @relation(fields: [boardId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([boardId, userId]) // пользователь не может быть добавлен дважды
+}
+
+enum BoardRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model Column {
+  id      String @id @default(uuid())
+  name    String
+  boardId String
+
+  board Board @relation(fields: [boardId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

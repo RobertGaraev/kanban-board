@@ -1,0 +1,34 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Body,
+  Param,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { BoardsService } from './boards.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateBoardDto } from './dto/create-board.dto';
+
+@Controller('boards')
+@UseGuards(JwtAuthGuard)
+export class BoardsController {
+  constructor(private boardsService: BoardsService) {}
+
+  @Post()
+  create(@Req() req, @Body() dto: CreateBoardDto) {
+    return this.boardsService.createBoard(req.user.userId, dto);
+  }
+
+  @Get()
+  findAll(@Req() req) {
+    return this.boardsService.getBoards(req.user.userId);
+  }
+
+  @Delete(':id')
+  remove(@Req() req, @Param('id') id: string) {
+    return this.boardsService.deleteBoard(req.user.userId, id);
+  }
+}
