@@ -2,9 +2,11 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBoardDto } from './dto/create-board.dto';
+import { InviteDto } from './dto/invite.dto';
 
 @Injectable()
 export class BoardsService {
@@ -28,7 +30,7 @@ export class BoardsService {
     });
   }
 
-  async getBoards(userId: string) {
+  async findAllByUser(userId: string) {
     return this.prisma.board.findMany({
       where: {
         members: {
@@ -60,6 +62,47 @@ export class BoardsService {
     // потом удалить доску
     return this.prisma.board.delete({
       where: { id: boardId },
+    });
+  }
+
+  async invite(boardId: string, dto: InviteDto, userId: string) {
+    const board = await this.prisma.board.findUnique({
+      where: { id: boardId },
+    });
+
+    if (!board) {
+      throw new ForbiddenException('Only owner can invite');
+    }
+
+    if (board.ownerId !== userId) {
+      throw new ForbiddenException('Only owner can invite');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const existing = await this.prisma.boardMember.findFirst({
+      where: {
+        boardId,
+        userId: user.id,
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException('User already in board');
+    }
+
+    return this.prisma.boardMember.create({
+      data: {
+        boardId,
+        userId: user.id,
+        role: dto.role,
+      },
     });
   }
 }

@@ -11,6 +11,8 @@ import {
 import { BoardsService } from './boards.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateBoardDto } from './dto/create-board.dto';
+import { InviteDto } from './dto/invite.dto';
+import type { Request } from 'express';
 
 @Controller('boards')
 @UseGuards(JwtAuthGuard)
@@ -24,11 +26,20 @@ export class BoardsController {
 
   @Get()
   findAll(@Req() req) {
-    return this.boardsService.getBoards(req.user.userId);
+    return this.boardsService.findAllByUser(req.user.userId);
   }
 
   @Delete(':id')
   remove(@Req() req, @Param('id') id: string) {
     return this.boardsService.deleteBoard(req.user.userId, id);
+  }
+
+  @Post(':id/invite')
+  invite(
+    @Param('id') boardId: string,
+    @Body() dto: InviteDto,
+    @Req() req: any,
+  ) {
+    return this.boardsService.invite(boardId, dto, req.user.userId);
   }
 }
