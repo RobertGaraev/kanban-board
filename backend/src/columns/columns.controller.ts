@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Delete,
+  Patch,
   Body,
   Param,
   Req,
@@ -30,5 +31,10 @@ export class ColumnsController {
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req: any) {
     return this.columnsService.remove(id, req.user.userId);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: { name: string }) {
+    return this.columnsService.update(id, dto.name);
   }
 }

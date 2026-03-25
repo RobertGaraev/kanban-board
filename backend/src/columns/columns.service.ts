@@ -74,4 +74,11 @@ export class ColumnsService {
       where: { id: columnId },
     });
   }
+
+  async update(id: string, name: string) {
+    return this.prisma.column.update({
+      where: { id },
+      data: { name },
+    });
+  }
 }

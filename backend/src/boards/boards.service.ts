@@ -16,6 +16,7 @@ export class BoardsService {
     return this.prisma.board.create({
       data: {
         name: dto.name,
+        description: dto.description,
         ownerId: userId,
         members: {
           create: {
@@ -62,6 +63,13 @@ export class BoardsService {
     // потом удалить доску
     return this.prisma.board.delete({
       where: { id: boardId },
+    });
+  }
+
+  async updateColumn(id: string, name: string) {
+    return this.prisma.column.update({
+      where: { id },
+      data: { name },
     });
   }
 

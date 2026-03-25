@@ -42,4 +42,18 @@ export class TasksController {
       req.user.userId,
     );
   }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body()
+    dto: {
+      title?: string;
+      description?: string;
+      assigneeId?: string;
+      deadline?: string;
+    },
+  ) {
+    return this.tasksService.update(id, dto);
+  }
 }
