@@ -9,9 +9,12 @@ export default function BoardPage() {
 
   const [columns, setColumns] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any>({}); // { columnId: Task[] }
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [members, setMembers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchColumns();
+    fetchMembers();
   }, []);
 
   const fetchColumns = async () => {
@@ -27,6 +30,11 @@ export default function BoardPage() {
     }
 
     setTasks(tasksMap);
+  };
+
+  const fetchMembers = async () => {
+    const res = await api.get(`/boards/${id}/members`);
+    setMembers(res.data);
   };
 
   // ➕ создать колонку
@@ -95,6 +103,11 @@ export default function BoardPage() {
     fetchColumns();
   };
 
+  const updateTask = async (taskId: string, data: any) => {
+    await api.patch(`/tasks/${taskId}`, data);
+    fetchColumns();
+  };
+
   return (
     <div className="p-6 overflow-x-auto">
       <h1 className="text-2xl font-bold mb-4">Доска</h1>
@@ -115,7 +128,70 @@ export default function BoardPage() {
             <div className="flex flex-col gap-2">
               {(tasks[col.id] || []).map((task: any) => (
                 <div key={task.id} className="bg-white p-2 rounded shadow">
-                  {task.title}
+                  {/* верхняя строка */}
+                  <div className="flex justify-between items-center">
+                    <span>{task.title}</span>
+
+                    <div className="flex gap-2">
+                      {/* стрелка */}
+                      <button
+                        onClick={() =>
+                          setExpandedTaskId(
+                            expandedTaskId === task.id ? null : task.id,
+                          )
+                        }
+                      >
+                        ⬇️
+                      </button>
+
+                      {/* редактировать */}
+                      <button onClick={() => editTask(task)}>✏️</button>
+
+                      {/* удалить */}
+                      <button onClick={() => deleteTask(task.id)}>🗑</button>
+                    </div>
+                  </div>
+
+                  {/* раскрывающийся блок */}
+                  {expandedTaskId === task.id && (
+                    <div className="mt-2 flex flex-col gap-2 text-sm">
+                      {/* описание */}
+                      <textarea
+                        value={task.description || ""}
+                        onChange={(e) =>
+                          updateTask(task.id, { description: e.target.value })
+                        }
+                        className="border p-1"
+                        placeholder="Описание"
+                      />
+
+                      {/* исполнитель */}
+                      <select
+                        value={task.assigneeId || ""}
+                        onChange={(e) =>
+                          updateTask(task.id, { assigneeId: e.target.value })
+                        }
+                        className="border p-1"
+                      >
+                        <option value="">Без исполнителя</option>
+                        {members.map((m: any) => (
+                          <option key={m.user.id} value={m.user.id}>
+                            {m.user.email}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* дедлайн */}
+                      <input
+                        type="date"
+                        value={task.deadline ? task.deadline.slice(0, 10) : ""}
+                        onChange={(e) =>
+                          updateTask(task.id, { deadline: e.target.value })
+                        }
+                        className="border p-1"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

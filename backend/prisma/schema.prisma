@@ -14,6 +14,8 @@ model User {
 
   boards       Board[]       @relation("OwnerBoards")
   boardMembers BoardMember[]
+
+  tasks        Task[]
 }
 
 model Board {
@@ -67,6 +69,11 @@ model Task {
   columnId    String
   column      Column  @relation(fields: [columnId], references: [id])
   order       Int
+
+  assigneeId  String?
+  assignee    User?    @relation(fields: [assigneeId], references: [id])
+
+  deadline    DateTime?
 
   createdAt DateTime @default(now())
 }

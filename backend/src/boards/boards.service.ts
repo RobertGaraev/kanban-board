@@ -113,4 +113,13 @@ export class BoardsService {
       },
     });
   }
+
+  async getMembers(boardId: string) {
+    return this.prisma.boardMember.findMany({
+      where: { boardId },
+      include: {
+        user: true,
+      },
+    });
+  }
 }

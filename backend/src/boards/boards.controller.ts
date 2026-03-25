@@ -42,4 +42,9 @@ export class BoardsController {
   ) {
     return this.boardsService.invite(boardId, dto, req.user.userId);
   }
+
+  @Get(':id/members')
+  getMembers(@Param('id') id: string) {
+    return this.boardsService.getMembers(id);
+  }
 }
