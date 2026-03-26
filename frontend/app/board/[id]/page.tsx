@@ -27,6 +27,8 @@ export default function BoardPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [role, setRole] = useState("EDITOR");
 
+  const [descriptions, setDescriptions] = useState<any>({});
+
   useEffect(() => {
     fetchBoard();
     fetchColumns();
@@ -55,11 +57,19 @@ export default function BoardPage() {
     setColumns(res.data);
 
     const map: any = {};
+    const descMap: any = {};
+
     for (const col of res.data) {
       const t = await api.get(`/tasks/column/${col.id}`);
       map[col.id] = t.data;
+
+      t.data.forEach((task: any) => {
+        descMap[task.id] = task.description || "";
+      });
     }
+
     setTasks(map);
+    setDescriptions(descMap);
   };
 
   const fetchMembers = async () => {
@@ -229,9 +239,17 @@ export default function BoardPage() {
                     <div className="mt-2 flex flex-col gap-2">
                       <textarea
                         disabled={!canEdit}
-                        value={task.description || ""}
+                        value={descriptions[task.id] || ""}
                         onChange={(e) =>
-                          updateTask(task.id, { description: e.target.value })
+                          setDescriptions({
+                            ...descriptions,
+                            [task.id]: e.target.value,
+                          })
+                        }
+                        onBlur={() =>
+                          updateTask(task.id, {
+                            description: descriptions[task.id],
+                          })
                         }
                         className="border p-1"
                       />
@@ -240,7 +258,9 @@ export default function BoardPage() {
                         disabled={!canEdit}
                         value={task.assigneeId || ""}
                         onChange={(e) =>
-                          updateTask(task.id, { assigneeId: e.target.value })
+                          updateTask(task.id, {
+                            assigneeId: e.target.value || null, // 🔥 ВАЖНО
+                          })
                         }
                         className="border p-1"
                       >
