@@ -28,12 +28,27 @@ export default function BoardPage() {
   const [role, setRole] = useState("EDITOR");
 
   const [descriptions, setDescriptions] = useState<any>({});
+  const availableMembers = members.filter(
+    (m: any) => m.user.id !== board?.ownerId,
+  );
 
   useEffect(() => {
     fetchBoard();
     fetchColumns();
     fetchMembers();
   }, []);
+
+  useEffect(() => {
+    if (!board) return; // защита
+
+    const availableMembers = members.filter(
+      (m: any) => m.user.id !== board.ownerId,
+    );
+
+    if (availableMembers.length === 1) {
+      setSelectedUserId(availableMembers[0].user.id);
+    }
+  }, [members, board]);
 
   const getUserId = () => {
     const token = localStorage.getItem("token");
@@ -358,50 +373,78 @@ export default function BoardPage() {
                 </button>
               </>
             )}
+            {(mode === "edit" || mode === "delete") &&
+              (() => {
+                const availableMembers = members.filter(
+                  (m: any) => m.user.id !== board?.ownerId,
+                );
 
-            {(mode === "edit" || mode === "delete") && (
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="border p-2"
-              >
-                {members
-                  .filter((m: any) => m.user.id !== board.ownerId)
-                  .map((m: any) => (
-                    <option key={m.user.id} value={m.user.id}>
-                      {m.user.email}
-                    </option>
-                  ))}
-              </select>
-            )}
+                // ❌ нет участников
+                if (availableMembers.length === 0) {
+                  return (
+                    <div className="text-gray-500">
+                      Нет участников для управления
+                    </div>
+                  );
+                }
 
-            {mode === "edit" && (
-              <>
-                <select
-                  onChange={(e) => setRole(e.target.value)}
-                  className="border p-2 rounded"
-                >
-                  <option value="EDITOR">Редактор</option>
-                  <option value="VIEWER">Наблюдатель</option>
-                </select>
+                return (
+                  <>
+                    {/* 👤 выбор участника */}
+                    {availableMembers.length === 1 ? (
+                      <div className="border p-2 rounded">
+                        {availableMembers[0].user.email}
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedUserId}
+                        onChange={(e) => setSelectedUserId(e.target.value)}
+                        className="border p-2 rounded"
+                      >
+                        <option value="">Выберите участника</option>
+                        {availableMembers.map((m: any) => (
+                          <option key={m.user.id} value={m.user.id}>
+                            {m.user.email}
+                          </option>
+                        ))}
+                      </select>
+                    )}
 
-                <button
-                  onClick={handleUpdateRole}
-                  className="border p-2 rounded"
-                >
-                  Изменить
-                </button>
-              </>
-            )}
+                    {/* ✏️ изменение роли */}
+                    {mode === "edit" && (
+                      <>
+                        <select
+                          value={role}
+                          onChange={(e) => setRole(e.target.value)}
+                          className="border p-2 rounded"
+                        >
+                          <option value="EDITOR">Редактор</option>
+                          <option value="VIEWER">Наблюдатель</option>
+                        </select>
 
-            {mode === "delete" && (
-              <button
-                onClick={handleDeleteMember}
-                className="border p-2 rounded"
-              >
-                Удалить
-              </button>
-            )}
+                        <button
+                          onClick={handleUpdateRole}
+                          disabled={!selectedUserId}
+                          className="border p-2 rounded"
+                        >
+                          Изменить
+                        </button>
+                      </>
+                    )}
+
+                    {/* 🗑 удаление */}
+                    {mode === "delete" && (
+                      <button
+                        onClick={handleDeleteMember}
+                        disabled={!selectedUserId}
+                        className="border p-2 rounded"
+                      >
+                        Удалить
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
 
             <button
               onClick={() => setMembersModal(false)}
