@@ -5,6 +5,7 @@ import {
   Get,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -16,8 +17,15 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto.email, dto.password);
+  async register(@Body() dto: RegisterDto) {
+    try {
+      return await this.authService.register(dto.email, dto.password);
+    } catch (e) {
+      if (e.message === 'USER_ALREADY_EXISTS') {
+        throw new BadRequestException('Пользователь уже существует');
+      }
+      throw e;
+    }
   }
 
   @Post('login')

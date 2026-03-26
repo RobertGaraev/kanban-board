@@ -4,6 +4,7 @@ import {
   Get,
   Delete,
   Body,
+  Patch,
   Param,
   Req,
   UseGuards,
@@ -46,5 +47,14 @@ export class BoardsController {
   @Get(':id/members')
   getMembers(@Param('id') id: string) {
     return this.boardsService.getMembers(id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() dto: { name: string; description?: string },
+    @Req() req,
+  ) {
+    return this.boardsService.updateBoard(id, req.user.userId, dto);
   }
 }

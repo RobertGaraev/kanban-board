@@ -34,11 +34,24 @@ export class BoardsService {
   async findAllByUser(userId: string) {
     return this.prisma.board.findMany({
       where: {
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: {
+                userId,
+              },
+            },
+          },
+        ],
+      },
+      include: {
         members: {
-          some: { userId },
+          where: {
+            userId,
+          },
         },
       },
-      include: { members: true },
     });
   }
 
@@ -120,6 +133,21 @@ export class BoardsService {
       include: {
         user: true,
       },
+    });
+  }
+
+  async updateBoard(id: string, userId: string, dto: any) {
+    const board = await this.prisma.board.findUnique({
+      where: { id },
+    });
+
+    if (!board || board.ownerId !== userId) {
+      throw new Error('Нет доступа');
+    }
+
+    return this.prisma.board.update({
+      where: { id },
+      data: dto,
     });
   }
 }
