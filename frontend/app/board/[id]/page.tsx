@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "../../../shared/api";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 const roleLabels: Record<string, string> = {
   OWNER: "Владелец",
@@ -178,6 +179,51 @@ export default function BoardPage() {
     fetchMembers();
   };
 
+  const onDragEnd = async (result: any) => {
+    if (!canEdit) return; // 🔒 запрет для VIEWER
+
+    const { source, destination, draggableId } = result;
+    if (!destination) return;
+
+    const sourceColId = source.droppableId;
+    const destColId = destination.droppableId;
+
+    if (sourceColId === destColId && source.index === destination.index) return;
+
+    // копируем массив задач из исходной колонки
+    const sourceTasks = Array.from(tasks[sourceColId]);
+    const [movedTask] = sourceTasks.splice(source.index, 1);
+
+    if (!movedTask) return;
+
+    // создаем копию задачи для TS
+    const movedTaskCopy = { ...movedTask };
+
+    if (sourceColId === destColId) {
+      sourceTasks.splice(destination.index, 0, movedTaskCopy);
+
+      setTasks({
+        ...tasks,
+        [sourceColId]: sourceTasks,
+      });
+    } else {
+      const destTasks = Array.from(tasks[destColId] || []);
+      destTasks.splice(destination.index, 0, movedTaskCopy);
+
+      setTasks({
+        ...tasks,
+        [sourceColId]: sourceTasks,
+        [destColId]: destTasks,
+      });
+    }
+
+    // уведомляем сервер о перемещении задачи
+    await api.patch(`/tasks/${draggableId}/move`, {
+      columnId: destColId,
+      order: destination.index,
+    });
+  };
+
   return (
     <div className="p-6">
       {/* HEADER */}
@@ -207,121 +253,150 @@ export default function BoardPage() {
         Ваша роль: {roleLabels[getRole()]}
       </p>
 
-      {/* КОЛОНКИ */}
-      <div className="flex gap-4 overflow-x-auto">
-        {columns.map((col) => (
-          <div key={col.id} className="w-64 bg-gray-100 p-3 rounded">
-            <div className="flex justify-between">
-              <h2>{col.name}</h2>
-
-              {isOwner && (
-                <div className="flex gap-2">
-                  <button onClick={() => renameColumn(col.id)}>✏️</button>
-                  <button onClick={() => deleteColumn(col.id)}>🗑</button>
-                </div>
-              )}
-            </div>
-
-            {/* задачи */}
-            <div className="flex flex-col gap-2 mt-2">
-              {(tasks[col.id] || []).map((task: any) => (
-                <div key={task.id} className="bg-white p-2 rounded shadow">
+      {/* 🔥 DRAG & DROP */}
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="flex gap-4 overflow-x-auto">
+          {columns.map((col) => (
+            <Droppable droppableId={col.id} key={col.id}>
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="w-64 bg-gray-100 p-3 rounded"
+                >
                   <div className="flex justify-between">
-                    <span>{task.title}</span>
+                    <h2>{col.name}</h2>
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() =>
-                          setExpandedTaskId(
-                            expandedTaskId === task.id ? null : task.id,
-                          )
-                        }
-                      >
-                        ⬇️
-                      </button>
-
-                      {canEdit && (
-                        <>
-                          <button onClick={() => deleteTask(task.id)}>
-                            🗑
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    {isOwner && (
+                      <div className="flex gap-2">
+                        <button onClick={() => renameColumn(col.id)}>✏️</button>
+                        <button onClick={() => deleteColumn(col.id)}>🗑</button>
+                      </div>
+                    )}
                   </div>
 
-                  {expandedTaskId === task.id && (
-                    <div className="mt-2 flex flex-col gap-2">
-                      <textarea
-                        disabled={!canEdit}
-                        value={descriptions[task.id] || ""}
-                        onChange={(e) =>
-                          setDescriptions({
-                            ...descriptions,
-                            [task.id]: e.target.value,
-                          })
-                        }
-                        onBlur={() =>
-                          updateTask(task.id, {
-                            description: descriptions[task.id],
-                          })
-                        }
-                        className="border p-1"
-                      />
-
-                      <select
-                        disabled={!canEdit}
-                        value={task.assigneeId || ""}
-                        onChange={(e) =>
-                          updateTask(task.id, {
-                            assigneeId: e.target.value || null, // 🔥 ВАЖНО
-                          })
-                        }
-                        className="border p-1"
+                  {/* задачи */}
+                  <div className="flex flex-col gap-2 mt-2">
+                    {(tasks[col.id] || []).map((task: any, index: number) => (
+                      <Draggable
+                        key={task.id}
+                        draggableId={task.id}
+                        index={index}
+                        isDragDisabled={!canEdit} // 🔒 запрет для VIEWER
                       >
-                        <option value="">Без исполнителя</option>
-                        {members.map((m: any) => (
-                          <option key={m.user.id} value={m.user.id}>
-                            {m.user.email}
-                          </option>
-                        ))}
-                      </select>
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className="bg-white p-2 rounded shadow"
+                          >
+                            <div className="flex justify-between">
+                              <span>{task.title}</span>
 
-                      <input
-                        type="date"
-                        disabled={!canEdit}
-                        value={task.deadline?.slice(0, 10) || ""}
-                        onChange={(e) =>
-                          updateTask(task.id, { deadline: e.target.value })
-                        }
-                        className="border p-1"
-                      />
-                    </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() =>
+                                    setExpandedTaskId(
+                                      expandedTaskId === task.id
+                                        ? null
+                                        : task.id,
+                                    )
+                                  }
+                                >
+                                  ⬇️
+                                </button>
+
+                                {canEdit && (
+                                  <button onClick={() => deleteTask(task.id)}>
+                                    🗑
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {expandedTaskId === task.id && (
+                              <div className="mt-2 flex flex-col gap-2">
+                                <textarea
+                                  disabled={!canEdit}
+                                  value={descriptions[task.id] || ""}
+                                  onChange={(e) =>
+                                    setDescriptions({
+                                      ...descriptions,
+                                      [task.id]: e.target.value,
+                                    })
+                                  }
+                                  onBlur={() =>
+                                    updateTask(task.id, {
+                                      description: descriptions[task.id],
+                                    })
+                                  }
+                                  className="border p-1"
+                                />
+
+                                <select
+                                  disabled={!canEdit}
+                                  value={task.assigneeId || ""}
+                                  onChange={(e) =>
+                                    updateTask(task.id, {
+                                      assigneeId: e.target.value || null,
+                                    })
+                                  }
+                                  className="border p-1"
+                                >
+                                  <option value="">Без исполнителя</option>
+                                  {members.map((m: any) => (
+                                    <option key={m.user.id} value={m.user.id}>
+                                      {m.user.email}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <input
+                                  type="date"
+                                  disabled={!canEdit}
+                                  value={task.deadline?.slice(0, 10) || ""}
+                                  onChange={(e) =>
+                                    updateTask(task.id, {
+                                      deadline: e.target.value,
+                                    })
+                                  }
+                                  className="border p-1"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+
+                    {/* 🔥 ОБЯЗАТЕЛЬНО */}
+                    {provided.placeholder}
+                  </div>
+
+                  {canEdit && (
+                    <button
+                      onClick={() => createTask(col.id)}
+                      className="mt-2 text-blue-500 text-sm"
+                    >
+                      + Задача
+                    </button>
                   )}
                 </div>
-              ))}
-            </div>
+              )}
+            </Droppable>
+          ))}
 
-            {canEdit && (
-              <button
-                onClick={() => createTask(col.id)}
-                className="mt-2 text-blue-500 text-sm"
-              >
-                + Задача
-              </button>
-            )}
-          </div>
-        ))}
-
-        {canEdit && (
-          <button
-            onClick={createColumn}
-            className="w-64 h-12 bg-gray-200 rounded"
-          >
-            + Колонка
-          </button>
-        )}
-      </div>
+          {canEdit && (
+            <button
+              onClick={createColumn}
+              className="w-64 h-12 bg-gray-200 rounded"
+            >
+              + Колонка
+            </button>
+          )}
+        </div>
+      </DragDropContext>
 
       {/* МОДАЛКА УЧАСТНИКОВ */}
       {membersModal && (
