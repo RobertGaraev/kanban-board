@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { InviteDto } from './dto/invite.dto';
 import type { Request } from 'express';
+import { BoardRole } from '@prisma/client';
 
 @Controller('boards')
 @UseGuards(JwtAuthGuard)
@@ -56,5 +57,33 @@ export class BoardsController {
     @Req() req,
   ) {
     return this.boardsService.updateBoard(id, req.user.userId, dto);
+  }
+
+  @Patch(':id/member')
+  updateMember(
+    @Param('id') boardId: string,
+    @Body() dto: { userId: string; role: BoardRole },
+    @Req() req,
+  ) {
+    return this.boardsService.updateMember(
+      boardId,
+      dto.userId,
+      dto.role,
+      req.user.userId,
+    );
+  }
+
+  @Delete(':id/member/:userId')
+  removeMember(
+    @Param('id') boardId: string,
+    @Param('userId') userId: string,
+    @Req() req,
+  ) {
+    return this.boardsService.removeMember(boardId, userId, req.user.userId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @Req() req) {
+    return this.boardsService.findOne(id, req.user.userId);
   }
 }

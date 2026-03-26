@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { InviteDto } from './dto/invite.dto';
+import { BoardRole } from '@prisma/client';
 
 @Injectable()
 export class BoardsService {
@@ -53,6 +54,33 @@ export class BoardsService {
         },
       },
     });
+  }
+
+  async findOne(id: string, userId: string) {
+    const board = await this.prisma.board.findUnique({
+      where: { id },
+      include: {
+        members: {
+          where: {
+            userId,
+          },
+        },
+      },
+    });
+
+    if (!board) {
+      throw new Error('Board not found');
+    }
+
+    // 🔒 проверка доступа
+    const isOwner = board.ownerId === userId;
+    const isMember = board.members.length > 0;
+
+    if (!isOwner && !isMember) {
+      throw new Error('Нет доступа');
+    }
+
+    return board;
   }
 
   async deleteBoard(userId: string, boardId: string) {
@@ -148,6 +176,54 @@ export class BoardsService {
     return this.prisma.board.update({
       where: { id },
       data: dto,
+    });
+  }
+
+  async updateMember(
+    boardId: string,
+    userId: string,
+    role: BoardRole,
+    currentUserId: string,
+  ) {
+    const board = await this.prisma.board.findUnique({
+      where: { id: boardId },
+    });
+
+    if (board?.ownerId !== currentUserId) {
+      throw new Error('Нет доступа');
+    }
+
+    if (board.ownerId === userId) {
+      throw new Error('OWNER_CANNOT_CHANGE');
+    }
+
+    return this.prisma.boardMember.update({
+      where: {
+        boardId_userId: {
+          boardId,
+          userId,
+        },
+      },
+      data: { role },
+    });
+  }
+
+  async removeMember(boardId: string, userId: string, currentUserId: string) {
+    const board = await this.prisma.board.findUnique({
+      where: { id: boardId },
+    });
+
+    if (board?.ownerId !== currentUserId) {
+      throw new Error('Нет доступа');
+    }
+
+    return this.prisma.boardMember.delete({
+      where: {
+        boardId_userId: {
+          boardId,
+          userId,
+        },
+      },
     });
   }
 }
