@@ -34,7 +34,7 @@ kanban-frontend → фронт
 kanban-backend → бек
 kanban-db → база
 
-3️⃣ Локальный запуск без Docker
+Локальный запуск без Docker
 Если хочешь работать локально:
 
 В одной вкладке терминала запускаем PostgreSQL (можно через Docker или локально)
@@ -68,8 +68,13 @@ Drag&drop между колонками
 Минимальные unit/integration тесты (frontend/backend)
 
 🧪 Тесты
-Backend: npm run test в папке kanban-backend
-Frontend: npm run test в папке kanban-frontend
+⚙️ Инструкция по запуску тестов
+🧩 Backend
+
+1. Перейти в backend
+   cd backend
+2. Запустить тесты
+   npm test
 
 📄 Примечания
 Для сброса данных в Docker:
