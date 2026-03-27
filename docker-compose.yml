@@ -1,16 +1,37 @@
+version: "3.9"
+
 services:
   postgres:
     image: postgres:15
-    container_name: kanban_postgres
+    container_name: kanban-db
     restart: always
     environment:
-      POSTGRES_USER: kanban
-      POSTGRES_PASSWORD: kanban
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: kanban
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: kanban-backend
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/kanban
+    command: sh -c "npx prisma migrate deploy && npm run start:dev"
+
+  frontend:
+    build: ./frontend
+    container_name: kanban-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3001:3001"
 
 volumes:
   postgres_data:

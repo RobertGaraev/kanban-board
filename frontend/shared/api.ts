@@ -1,7 +1,10 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "http://localhost:3000", // твой backend
+  baseURL:
+    typeof window === "undefined"
+      ? "http://backend:3000" // внутри Docker
+      : "http://localhost:3000", // браузер
 });
 
 // Добавляем токен автоматически

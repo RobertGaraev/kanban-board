@@ -1,0 +1,61 @@
+🛠 Инструкции по запуску Kanban
+
+1️⃣ Требования
+Docker и Docker Compose
+Node.js (только если планируешь запуск локально без Docker)
+Браузер (Chrome, Firefox или другой современный)
+
+2️⃣ Запуск через Docker (рекомендуется)
+Клонируем репозиторий:
+git clone https://github.com/RobertGaraev/kanban-board
+cd kanban-board
+
+Создаём .env файл (если не создан. смоттреть в backend) с настройками БД и бекенда:
+
+# .env
+DATABASE_URL=postgresql://postgres:password@postgres:5432/kanban
+JWT_SECRET=your_secret
+
+Запускаем все сервисы через Docker Compose:
+docker-compose up --build
+
+⚠️ Фронтенд запускается на http://localhost:3001
+Backend на http://localhost:3000
+База данных PostgreSQL внутри контейнера на порту 5432 (локально к ней подключаться не нужно, только через backend)
+
+Проверяем, что контейнеры работают:
+docker ps
+kanban-frontend → фронт
+kanban-backend → бек
+kanban-db → база
+
+3️⃣ Локальный запуск без Docker
+Если хочешь работать локально:
+
+В одной вкладке терминала запускаем PostgreSQL (можно через Docker или локально)
+В корне проекта создаём .env:
+DATABASE_URL=postgresql://postgres:password@localhost:5432/kanban
+JWT_SECRET=your_secret
+
+Запускаем backend:
+cd .\backend\
+npm install
+npx prisma migrate deploy  # применяем миграции
+npm run start:dev
+
+Запускаем frontend:
+cd .\frontend\
+npm install
+npm run dev
+
+Фронт доступен на http://localhost:3001
+Backend на http://localhost:3000
+
+4️⃣ Демонстрация
+После запуска фронта открываем браузер: http://localhost:3001/login
+Логинимся или регистрируемся, создаём доску, добавляем задачи и колонки.
+
+5️⃣ Примечания
+Для сброса базы данных через Docker:
+docker-compose down -v ⚠️ Это удалит все данные в PostgreSQL! Использовать (-v) крайне аккуратно
+docker-compose up --build
